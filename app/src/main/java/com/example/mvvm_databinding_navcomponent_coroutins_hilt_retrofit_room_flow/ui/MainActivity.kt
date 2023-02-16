@@ -1,13 +1,17 @@
 package com.example.mvvm_databinding_navcomponent_coroutins_hilt_retrofit_room_flow.ui
 
-import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
-import androidx.databinding.DataBindingUtil
-import com.example.mvvm_databinding_navcomponent_coroutins_hilt_retrofit_room_flow.data.local.User
-import com.example.mvvm_databinding_navcomponent_coroutins_hilt_retrofit_room_flow.data.local.UserDao
+import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
 import com.example.mvvm_databinding_navcomponent_coroutins_hilt_retrofit_room_flow.data.local.UserDatabase
+import com.example.mvvm_databinding_navcomponent_coroutins_hilt_retrofit_room_flow.data.server.ApiServices
 import com.example.mvvm_databinding_navcomponent_coroutins_hilt_retrofit_room_flow.databinding.ActivityMainBinding
+import com.example.mvvm_databinding_navcomponent_coroutins_hilt_retrofit_room_flow.ui.auth.dao.UsersDao
+import com.example.mvvm_databinding_navcomponent_coroutins_hilt_retrofit_room_flow.ui.auth.models.AuthResponse
+import com.example.mvvm_databinding_navcomponent_coroutins_hilt_retrofit_room_flow.ui.auth.models.UserResponse
+import com.example.mvvm_databinding_navcomponent_coroutins_hilt_retrofit_room_flow.ui.auth.models.Users
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -16,52 +20,71 @@ class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
 
     @Inject
-    lateinit var myData: String
-
-    @Inject
     lateinit var database: UserDatabase
 
     @Inject
-    lateinit var userDao: UserDao
+    lateinit var usersDao: UsersDao
 
-    lateinit var userList: List<User>
+    @Inject
+    lateinit var apiServices: ApiServices
+
+    private lateinit var authResponse: AuthResponse
+    private lateinit var userResponse: UserResponse
+    private lateinit var usersList: List<Users>
+    val data: StringBuilder = StringBuilder()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         //set data Binding
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        authResponse = AuthResponse()
 
+        getDataApiCall()
+
+    }
+
+    private fun getDataApiCall() {
+
+        lifecycleScope.launch {
+            userResponse = apiServices.getData().body()!!
+            usersList = userResponse.data as List<Users>
+            insertData(usersList)
+
+        }
     }
 
     override fun onResume() {
         super.onResume()
 
-        insertData()
-        getDataFromDatabase()
-        setData()
+        lifecycleScope.launch {
+            getDataFromDatabase()
+            setData()
+        }
 
     }
 
     private fun setData() {
-        for (i in userList.indices) {
+        for (i in usersList.indices) {
             //set data into textview
-            binding.test = userList[i].name
+            binding.test = data.append(usersList[i].email + "\n").toString()
         }
     }
 
-    private fun getDataFromDatabase() {
-        userList = database.userDao().getData()
+    private suspend fun getDataFromDatabase() {
+        usersList = database.usersDao().getData()
     }
 
-    private fun insertData() {
-        database.userDao().insert(User(1, "jaimin", 1234567890))
+    private suspend fun insertData(usersList: List<Users>) {
+        database.usersDao().insert(usersList)
     }
 
     override fun onDestroy() {
         super.onDestroy()
-        //delete all data from user table
-        database.userDao().deleteAll()
+        lifecycleScope.launch {
+            //delete all data from user table
+            database.usersDao().deleteAll()
+        }
     }
 
 }
