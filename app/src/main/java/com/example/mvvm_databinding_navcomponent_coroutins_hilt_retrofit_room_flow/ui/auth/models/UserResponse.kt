@@ -1,8 +1,8 @@
 package com.example.mvvm_databinding_navcomponent_coroutins_hilt_retrofit_room_flow.ui.auth.models
 
-import androidx.room.Entity
-import androidx.room.PrimaryKey
+import androidx.room.*
 import com.google.gson.annotations.SerializedName
+
 
 data class UserResponse(
 
